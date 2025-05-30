@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Home - E-commerce</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --primary-color: #4a90e2;
+      --text-color: #333;
+      --bg-color: #f9f9f9;
+      --card-bg: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: var(--primary-color);
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .left-header {
+      font-size: 1.6rem;
+      font-weight: bold;
+    }
+
+    .right-header {
+      display: flex;
+      gap: 20px;
+    }
+
+    .right-header a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      transition: opacity 0.3s;
+    }
+
+    .right-header a:hover {
+      opacity: 0.8;
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      padding: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    #search, #category-filter {
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      min-width: 200px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    #search:focus, #category-filter:focus {
+      border-color: var(--primary-color);
+    }
+
+    #product-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1.5rem;
+      padding: 2rem;
+    }
+
+    #product-list li {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      transition: transform 0.2s, box-shadow 0.2s;
+      list-style: none;
+      text-align: center;
+    }
+
+    #product-list li:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+    }
+
+    #product-list img {
+      max-height: 150px;
+      object-fit: contain;
+      margin-bottom: 15px;
+      width: 100%;
+    }
+
+    #product-list strong {
+      font-size: 1.1rem;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    #product-list button {
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    #product-list button:hover {
+      background: #357ace;
+    }
+
+    @media (max-width: 600px) {
+      .left-header {
+        font-size: 1.2rem;
+      }
+
+      .right-header {
+        gap: 10px;
+        font-size: 0.9rem;
+      }
+
+      #search, #category-filter {
+        min-width: 150px;
+      }
+
+      #product-list {
+        padding: 1rem;
+        gap: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="left-header">🛍️ Our Store</div>
+    <div class="right-header">
+      <a href="login.html">🔐 Login</a>
+      <a href="register.html">📝 Register</a>
+      <a href="cart.html">🛒 Cart</a>
+    </div>
+  </header>
+
+  <div class="search-bar">
+    <input type="text" id="search" placeholder="🔎 Search products..." />
+    <select id="category-filter">
+      <option value="">All Categories</option>
+    </select>
+  </div>
+
+  <ul id="product-list"></ul>
+
+  <script>
+    async function loadProducts() {
+      const res = await fetch('/products');
+      const products = await res.json();
+
+      const categorySet = new Set(products.map(p => p.category));
+      const categorySelect = document.getElementById("category-filter");
+      categorySet.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        categorySelect.appendChild(opt);
+      });
+
+      function render(filtered) {
+        const ul = document.getElementById("product-list");
+        ul.innerHTML = "";
+        filtered.forEach(prod => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <img src="${prod.image}" alt="${prod.name}">
+            <strong>${prod.name}</strong>
+            <div>$${prod.price} - ${prod.category}</div>
+          `;
+          const btn = document.createElement("button");
+          btn.textContent = "Add to Cart";
+          btn.onclick = () => {
+            let cart = JSON.parse(localStorage.getItem("cart")) || [];
+            cart.push(prod);
+            localStorage.setItem("cart", JSON.stringify(cart));
+            alert("✅ Added to cart!");
+          };
+          li.appendChild(btn);
+          ul.appendChild(li);
+        });
+      }
+
+      const filter = () => {
+        const search = document.getElementById("search").value.toLowerCase();
+        const cat = categorySelect.value;
+        render(products.filter(p =>
+          p.name.toLowerCase().includes(search) &&
+          (cat === "" || p.category === cat)
+        ));
+      };
+
+      document.getElementById("search").addEventListener("input", filter);
+      categorySelect.addEventListener("change", filter);
+      render(products);
+    }
+
+    loadProducts();
+  </script>
+
+</body>
+</html>
