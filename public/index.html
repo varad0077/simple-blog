@@ -38,7 +38,88 @@
             <option value="DevOps">DevOps</option>
             <option value="Cloud Computing">Cloud Computing</option>
     </select>
-          <textarea id="postContent" placeholder="Write your post content here..." required></textarea>
+          <div class="editor-container">
+            <div class="editor-toolbar">
+              <div class="toolbar-group">
+                <button type="button" class="toolbar-btn" onclick="formatText('bold')" title="Bold">
+                  <strong>B</strong>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatText('italic')" title="Italic">
+                  <em>I</em>
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatText('underline')" title="Underline">
+                  <u>U</u>
+                </button>
+              </div>
+              
+              <div class="toolbar-group">
+                <select id="fontFamily" class="toolbar-select" onchange="formatText('fontName', this.value)">
+                  <option value="">Font Family</option>
+                  <option value="Arial">Arial</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Courier New">Courier New</option>
+                  <option value="Verdana">Verdana</option>
+                  <option value="Comic Sans MS">Comic Sans MS</option>
+                </select>
+                
+                <select id="fontSize" class="toolbar-select" onchange="formatText('fontSize', this.value)">
+                  <option value="">Font Size</option>
+                  <option value="1">Small</option>
+                  <option value="3">Normal</option>
+                  <option value="5">Large</option>
+                  <option value="7">Extra Large</option>
+                </select>
+              </div>
+              
+              <div class="toolbar-group">
+                <input type="color" id="textColor" class="color-picker" onchange="formatText('foreColor', this.value)" title="Text Color">
+                <input type="color" id="bgColor" class="color-picker" onchange="formatText('backColor', this.value)" title="Background Color">
+              </div>
+              
+              <div class="toolbar-group">
+                <button type="button" class="toolbar-btn" onclick="formatText('justifyLeft')" title="Align Left">
+                  ←
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatText('justifyCenter')" title="Center">
+                  ↔
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatText('justifyRight')" title="Align Right">
+                  →
+                </button>
+              </div>
+              
+              <div class="toolbar-group">
+                <button type="button" class="toolbar-btn" onclick="formatText('insertOrderedList')" title="Numbered List">
+                  1.
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatText('insertUnorderedList')" title="Bullet List">
+                  •
+                </button>
+              </div>
+              
+              <div class="toolbar-group">
+                <button type="button" class="toolbar-btn" onclick="insertLink()" title="Insert Link">
+                  🔗
+                </button>
+                <button type="button" class="toolbar-btn" onclick="formatText('removeFormat')" title="Clear Formatting">
+                  ✗
+                </button>
+              </div>
+            </div>
+            
+            <div id="postContent" class="rich-editor" contenteditable="true" placeholder="Write your post content here..." required></div>
+            <textarea id="hiddenContent" style="display: none;" required></textarea>
+          </div>
+          
+          <div class="image-upload-section">
+            <label for="imageUpload" class="image-upload-label">
+              📷 Add Image to Post
+            </label>
+            <input type="file" id="imageUpload" accept="image/*" class="image-upload-input">
+            <div id="imagePreview" class="image-preview"></div>
+          </div>
+          
           <button type="submit">Publish Post</button>
         </form>
       </div>
@@ -69,6 +150,25 @@
     const newPostBtn = document.getElementById('newPostBtn');
     const logoutBtn = document.getElementById('logoutBtn');
 
+    // Format post content to handle images and rich text
+    function formatPostContent(content) {
+      // If content already contains HTML tags, return as is
+      if (content.includes('<') && content.includes('>')) {
+        // Handle markdown-style images within HTML content
+        return content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
+      }
+      
+      // Legacy plain text content
+      return content.split('\n').map(paragraph => {
+        // Check if paragraph contains markdown-style image
+        const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+        if (imageRegex.test(paragraph)) {
+          return paragraph.replace(imageRegex, '<img src="$2" alt="$1" />');
+        }
+        return paragraph ? `<p>${paragraph}</p>` : '';
+      }).join('');
+    }
+
     // Load posts
     async function loadPosts() {
       try {
@@ -82,14 +182,22 @@
 
     // Display posts
     function displayPosts(posts) {
-      postsList.innerHTML = posts.map(post => `
+      postsList.innerHTML = posts.map(post => {
+        // Clean content for excerpt (remove HTML tags and image markdown syntax)
+        const cleanContent = post.content
+          .replace(/<[^>]*>/g, '') // Remove HTML tags
+          .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '') // Remove image markdown
+          .trim();
+        const excerpt = cleanContent.substring(0, 150);
+        
+        return `
         <div class="post-card" onclick="showPostDetail(${post.id})">
           <div class="post-header">
             <h2>${post.title}</h2>
             <span class="post-category">${post.category}</span>
           </div>
           <div class="post-content">
-            <p class="post-excerpt">${post.content.substring(0, 150)}...</p>
+            <p class="post-excerpt">${excerpt}${excerpt.length >= 150 ? '...' : ''}</p>
           </div>
           <div class="post-footer">
             <div class="post-meta">
@@ -101,7 +209,8 @@
             </div>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     // Show post detail
@@ -123,7 +232,7 @@
             </div>
           </div>
           <div class="post-detail-content">
-            ${post.content.split('\n').map(paragraph => `<p>${paragraph}</p>`).join('')}
+            ${formatPostContent(post.content)}
           </div>
         `;
 
@@ -161,12 +270,145 @@
       }
     });
 
+    // Image upload preview
+    document.getElementById('imageUpload').onchange = function(e) {
+      const file = e.target.files[0];
+      const preview = document.getElementById('imagePreview');
+      
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.innerHTML = `
+            <div class="preview-container">
+              <img src="${e.target.result}" alt="Preview" class="preview-image">
+              <button type="button" class="remove-image" onclick="removeImagePreview()">✕</button>
+            </div>
+          `;
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    // Remove image preview
+    window.removeImagePreview = function() {
+      document.getElementById('imagePreview').innerHTML = '';
+      document.getElementById('imageUpload').value = '';
+    };
+
+    // Rich text editor functions
+    window.formatText = function(command, value = null) {
+      document.execCommand(command, false, value);
+      document.getElementById('postContent').focus();
+      
+      // Update button states
+      updateToolbarButtons();
+      
+      // Update hidden textarea with formatted content
+      updateHiddenContent();
+    };
+
+    // Update toolbar button states based on current selection
+    function updateToolbarButtons() {
+      const commands = [
+        { command: 'bold', selector: '[onclick*="formatText(\'bold\')"]' },
+        { command: 'italic', selector: '[onclick*="formatText(\'italic\')"]' },
+        { command: 'underline', selector: '[onclick*="formatText(\'underline\')"]' },
+        { command: 'justifyLeft', selector: '[onclick*="formatText(\'justifyLeft\')"]' },
+        { command: 'justifyCenter', selector: '[onclick*="formatText(\'justifyCenter\')"]' },
+        { command: 'justifyRight', selector: '[onclick*="formatText(\'justifyRight\')"]' },
+        { command: 'insertOrderedList', selector: '[onclick*="formatText(\'insertOrderedList\')"]' },
+        { command: 'insertUnorderedList', selector: '[onclick*="formatText(\'insertUnorderedList\')"]' }
+      ];
+
+      commands.forEach(({ command, selector }) => {
+        const button = document.querySelector(selector);
+        if (button) {
+          if (document.queryCommandState(command)) {
+            button.classList.add('active');
+          } else {
+            button.classList.remove('active');
+          }
+        }
+      });
+    }
+
+    window.insertLink = function() {
+      const url = prompt('Enter the URL:');
+      if (url) {
+        formatText('createLink', url);
+      }
+    };
+
+    function updateHiddenContent() {
+      const editor = document.getElementById('postContent');
+      const hiddenTextarea = document.getElementById('hiddenContent');
+      hiddenTextarea.value = editor.innerHTML;
+    }
+
+    // Update hidden content when typing
+    document.addEventListener('DOMContentLoaded', function() {
+      const editor = document.getElementById('postContent');
+      if (editor) {
+        editor.addEventListener('input', function() {
+          updateHiddenContent();
+          updateToolbarButtons();
+        });
+        
+        editor.addEventListener('paste', function(e) {
+          setTimeout(function() {
+            updateHiddenContent();
+            updateToolbarButtons();
+          }, 100);
+        });
+        
+        // Update button states when selection changes
+        editor.addEventListener('keyup', updateToolbarButtons);
+        editor.addEventListener('mouseup', updateToolbarButtons);
+        editor.addEventListener('focus', updateToolbarButtons);
+      }
+    });
+
     // New post form submission
     document.getElementById('newPostForm').onsubmit = async (e) => {
       e.preventDefault();
+      
+      let imageUrl = '';
+      const imageFile = document.getElementById('imageUpload').files[0];
+      
+      // Upload image first if selected
+      if (imageFile) {
+        try {
+          const formData = new FormData();
+          formData.append('image', imageFile);
+          
+          const imageResponse = await fetch('/upload-image', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (imageResponse.ok) {
+            const imageData = await imageResponse.json();
+            imageUrl = imageData.imageUrl;
+          } else {
+            alert('Error uploading image. Please try again.');
+            return;
+          }
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          alert('Error uploading image. Please try again.');
+          return;
+        }
+      }
+
+      // Create post with optional image
+      let content = document.getElementById('postContent').innerHTML;
+      if (imageUrl) {
+        content += `\n\n![Uploaded Image](${imageUrl})`;
+      }
+
       const post = {
         title: document.getElementById('postTitle').value,
-        content: document.getElementById('postContent').value,
+        content: content,
         category: document.getElementById('postCategory').value
       };
 
@@ -181,6 +423,9 @@
           newPostModal.style.display = 'none';
           loadPosts();
           e.target.reset();
+          document.getElementById('postContent').innerHTML = '';
+          document.getElementById('hiddenContent').value = '';
+          document.getElementById('imagePreview').innerHTML = '';
         }
       } catch (error) {
         console.error('Error creating post:', error);
