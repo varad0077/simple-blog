@@ -16,7 +16,7 @@ app.use(session({
 }));
 
 const USERS_FILE = 'users.json';
-const ORDERS_FILE = 'orders.json';
+const POSTS_FILE = 'posts.json';
 
 // ---------- Helper Middleware ----------
 function isAuthenticated(req, res, next) {
@@ -83,23 +83,64 @@ app.post('/register', (req, res) => {
   });
 });
 
-// Serve products (optional: keep public or protect)
-app.get('/products', (req, res) => {
-  fs.readFile('./public/products.json', (err, data) => {
-    if (err) return res.status(500).send("Error reading products.");
+// Get all blog posts
+app.get('/posts', (req, res) => {
+  fs.readFile(POSTS_FILE, (err, data) => {
+    if (err) return res.status(500).send("Error reading posts.");
     res.json(JSON.parse(data));
   });
 });
 
-// Place order - protected
-app.post('/order', isAuthenticated, (req, res) => {
-  const order = req.body;
-  fs.readFile(ORDERS_FILE, (err, data) => {
-    const orders = err ? [] : JSON.parse(data);
-    orders.push({ ...order, user: req.session.user });
-    fs.writeFile(ORDERS_FILE, JSON.stringify(orders, null, 2), err => {
-      if (err) return res.status(500).send("Error saving order.");
-      res.status(200).send("Order saved.");
+// Get single blog post
+app.get('/posts/:id', (req, res) => {
+  fs.readFile(POSTS_FILE, (err, data) => {
+    if (err) return res.status(500).send("Error reading posts.");
+    const posts = JSON.parse(data);
+    const post = posts.find(p => p.id === Number(req.params.id));
+    if (!post) return res.status(404).send("Post not found");
+    res.json(post);
+  });
+});
+
+// Create new blog post (protected)
+app.post('/posts', isAuthenticated, (req, res) => {
+  const newPost = {
+    ...req.body,
+    id: Date.now(),
+    date: new Date().toISOString().split('T')[0],
+    author: req.session.user,
+    comments: []
+  };
+  
+  fs.readFile(POSTS_FILE, (err, data) => {
+    const posts = err ? [] : JSON.parse(data);
+    posts.push(newPost);
+    fs.writeFile(POSTS_FILE, JSON.stringify(posts, null, 2), err => {
+      if (err) return res.status(500).send("Error saving post.");
+      res.status(200).json(newPost);
+    });
+  });
+});
+
+// Add comment to post (protected)
+app.post('/posts/:id/comments', isAuthenticated, (req, res) => {
+  const { comment } = req.body;
+  fs.readFile(POSTS_FILE, (err, data) => {
+    if (err) return res.status(500).send("Error reading posts.");
+    const posts = JSON.parse(data);
+    const postIndex = posts.findIndex(p => p.id === Number(req.params.id));
+    if (postIndex === -1) return res.status(404).send("Post not found");
+    
+    const newComment = {
+      username: req.session.user,
+      comment,
+      date: new Date().toISOString().split('T')[0]
+    };
+    
+    posts[postIndex].comments.push(newComment);
+    fs.writeFile(POSTS_FILE, JSON.stringify(posts, null, 2), err => {
+      if (err) return res.status(500).send("Error saving comment.");
+      res.status(200).json(newComment);
     });
   });
 });

@@ -1,0 +1,31 @@
+[
+  {
+    "title": "This is a new Post",
+    "content": "asdfghjkwertyuzxcvbnwertyuidfghjklxc\nsdsedcrbghjmk\nsd ftgyhujil̥\n",
+    "category": "Web Development",
+    "id": 1748799735574,
+    "date": "2025-06-01",
+    "author": "admin",
+    "comments": [
+      {
+        "username": "admin",
+        "comment": "hi\n",
+        "date": "2025-06-01"
+      },
+      {
+        "username": "sample",
+        "comment": "Hello",
+        "date": "2025-06-01"
+      }
+    ]
+  },
+  {
+    "title": "new post",
+    "content": "azwexsrcfvbgynjimko,l.",
+    "category": "Web Development",
+    "id": 1748799832256,
+    "date": "2025-06-01",
+    "author": "admin",
+    "comments": []
+  }
+]

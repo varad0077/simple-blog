@@ -66,5 +66,13 @@
   {
     "username": "dock",
     "password": "dock"
+  },
+  {
+    "username": "admin",
+    "password": "admin"
+  },
+  {
+    "username": "sample",
+    "password": "sample"
   }
 ]
