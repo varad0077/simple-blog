@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HOST_IP = "13.61.216.73"
+        DOCKER_HOST_IP = "51.21.60.136"
         DOCKER_USER = "ubuntu"
         DOCKER_APP_DIR = "web-app"
     }
@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/ullassam/devops.git'
+                git branch: 'main', url: 'https://github.com/varad0077/simple-blog.git'
             }
         }
 
@@ -24,7 +24,7 @@ pipeline {
 
                 scp -i \$KEY -o StrictHostKeyChecking=no -r \
                     auth public \
-                    Dockerfile package.json package-lock.json orders.json server.js users.json\
+                    Dockerfile package.json package-lock.json posts.json server.js users.json\
                     ${DOCKER_USER}@${DOCKER_HOST_IP}:${DOCKER_APP_DIR}/
 
                 ssh -i \$KEY -o StrictHostKeyChecking=no ${DOCKER_USER}@${DOCKER_HOST_IP} '
